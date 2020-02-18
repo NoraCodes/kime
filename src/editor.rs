@@ -2,6 +2,7 @@ use std::io::{self, BufRead, BufReader, ErrorKind::NotFound, Read, Seek, Write};
 use std::iter::{self, repeat, successors};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::{fmt::Display, fs::File, path::Path, time::Instant};
+use std::mem;
 
 use nix::sys::termios::Termios;
 use signal_hook::{iterator::Signals, SIGWINCH};
@@ -69,9 +70,8 @@ struct CursorState {
 
 /// The `Editor` struct, contains the state and configuration of the text editor.
 pub struct Editor<'a> {
-    /// If not `None`, the current prompt mode (Save, Find, GoTo). If `None`, we are in regular
-    /// edition mode.
-    prompt_mode: Option<PromptMode>,
+    /// The current mode of the editor.
+    prompt_mode: PromptMode,
     /// The current state of the cursor.
     cursor: CursorState,
     /// The padding size used on the left for line numbering.
@@ -150,7 +150,7 @@ impl<'a> Editor<'a> {
         std::thread::spawn(move || signals.forever().for_each(|_| ws_changed_tx.send(()).unwrap()));
 
         let mut editor = Self {
-            prompt_mode: None,
+            prompt_mode: PromptMode::Command(String::new()),
             cursor: CursorState::default(),
             // Will be updated with update_window_size() below
             ln_pad: 0,
@@ -171,6 +171,13 @@ impl<'a> Editor<'a> {
         editor.update_window_size()?;
 
         Ok(editor)
+    }
+
+    // Get the value of the current mode, replacing it with Insert (for now).
+    fn get_mode_swap(&mut self) -> PromptMode {
+        let mut mode = PromptMode::Insert;
+        mem::swap(&mut self.prompt_mode, &mut mode); 
+        return mode;
     }
 
     /// Return the current row if the cursor points to an existing row, `None` otherwise.
@@ -576,24 +583,23 @@ impl<'a> Editor<'a> {
         self.draw_rows(&mut buffer);
         self.draw_status_bar(&mut buffer);
         self.draw_message_bar(&mut buffer);
-        let (cursor_x, cursor_y) = if self.prompt_mode.is_none() {
-            // If not in prompt mode, position the cursor according to the `cursor` attributes.
-            (self.rx() - self.cursor.coff + 1 + self.ln_pad, self.cursor.y - self.cursor.roff + 1)
-        } else {
-            // If in prompt mode, position the cursor on the prompt line at the end of the line.
-            (self.status_msg.as_ref().map_or(0, |sm| sm.msg.len() + 1), self.screen_rows + 2)
+        let (cursor_x, cursor_y) = match self.prompt_mode {
+            // TODO: For proper Normal mode, Insert and Normal are the same re: positioning
+            PromptMode::Insert => (self.rx() - self.cursor.coff + 1 + self.ln_pad, self.cursor.y - self.cursor.roff + 1),
+            _ => (self.status_msg.as_ref().map_or(0, |sm| sm.msg.len() + 1), self.screen_rows + 2)
         };
         // Move the cursor
         buffer.push_str(&format!("\x1b[{};{}H{}", cursor_y, cursor_x, SHOW_CURSOR));
         terminal::print_and_flush(&buffer)
     }
 
-    /// Process a key that has been pressed, when not in prompt mode. Returns whether the program
+    /// Process a key that has been pressed in Insert mode. Returns whether the program
     /// should exit, and optionally the prompt mode to switch to.
-    fn process_keypress(&mut self, key: &Key) -> Result<(bool, Option<PromptMode>), Error> {
+    // TODO: Unify with prompt_mode::process_keypress
+    fn process_keypress(&mut self, key: &Key) -> Result<(bool, PromptMode), Error> {
         // This won't be mutated, unless key is Key::Character(EXIT)
         let mut quit_times = self.config.quit_times;
-        let mut prompt_mode = None;
+        let mut prompt_mode = PromptMode::Insert;
 
         match key {
             // TODO: CtrlArrow should move to next word
@@ -618,7 +624,7 @@ impl<'a> Editor<'a> {
             Key::Char(EXIT) => {
                 quit_times = self.quit_times - 1;
                 if !self.dirty || quit_times == 0 {
-                    return Ok((true, None));
+                    return Ok((true, PromptMode::Insert));
                 }
                 let times = if quit_times > 1 { "times" } else { "time" };
                 set_status!(self, "Press Ctrl+Q {} more {} to quit.", quit_times, times);
@@ -629,12 +635,12 @@ impl<'a> Editor<'a> {
                     self.save_and_handle_io_errors(&file_name);
                     self.file_name = Some(file_name)
                 }
-                None => prompt_mode = Some(PromptMode::Save(String::new())),
+                None => prompt_mode = PromptMode::Save(String::new()),
             },
             Key::Char(FIND) => {
-                prompt_mode = Some(PromptMode::Find(String::new(), self.cursor.clone(), None))
+                prompt_mode = PromptMode::Find(String::new(), self.cursor.clone(), None)
             }
-            Key::Char(GOTO) => prompt_mode = Some(PromptMode::GoTo(String::new())),
+            Key::Char(GOTO) => prompt_mode = PromptMode::GoTo(String::new()),
             Key::Char(DUPLICATE) => self.duplicate_current_row(),
             Key::Char(c) => self.insert_byte(*c),
         }
@@ -679,19 +685,16 @@ impl<'a> Editor<'a> {
         }
         self.file_name = file_name;
         loop {
-            if let Some(mode) = self.prompt_mode.as_ref() {
-                set_status!(self, "{}", mode.status_msg());
-            }
+            set_status!(self, "{}", self.prompt_mode.status_msg());
             self.refresh_screen()?;
             let key = self.loop_until_keypress()?;
-            // TODO: Can we avoid using take()?
-            self.prompt_mode = match self.prompt_mode.take() {
+            self.prompt_mode = match self.get_mode_swap() {
                 // process_keypress returns (should_quit, prompt_mode)
-                None => match self.process_keypress(&key)? {
+                PromptMode::Insert => match self.process_keypress(&key)? {
                     (true, _) => return Ok(()),
                     (false, prompt_mode) => prompt_mode,
                 },
-                Some(prompt_mode) => prompt_mode.process_keypress(self, &key)?,
+                prompt_mode => prompt_mode.process_keypress(self, &key)?,
             }
         }
     }
@@ -706,6 +709,11 @@ impl<'a> Drop for Editor<'a> {
 
 /// The prompt mode.
 enum PromptMode {
+    // TODO: Add Normal mode by analogy with Insert
+    /// Command Mode(prompt buffer)
+    Command (String),
+    /// Insert Mode
+    Insert,
     /// Save(prompt buffer)
     Save(String),
     /// Find(prompt buffer, saved cursor state, last match)
@@ -720,18 +728,21 @@ impl PromptMode {
     /// Return the status message to print for the selected `PromptMode`.
     fn status_msg(&self) -> String {
         match self {
-            Self::Save(buffer) => format!("Save as: {}", buffer),
-            Self::Find(buffer, ..) => format!("Search (Use ESC/Arrows/Enter): {}", buffer),
-            Self::GoTo(buffer) => format!("Enter line number[:column number]: {}", buffer),
+            Self::Insert => format!("INSERT"),
+            Self::Command(buffer) => format!(": {}", buffer),
+            Self::Save(buffer) => format!("write to: {}", buffer),
+            Self::Find(buffer, ..) => format!("search (ESC/Arrows/Enter): {}", buffer),
+            Self::GoTo(buffer) => format!("enter line number[:column number]: {}", buffer),
         }
     }
 
     /// Process a keypress event for the selected `PromptMode`.
-    fn process_keypress(self, ed: &mut Editor, key: &Key) -> Result<Option<Self>, Error> {
+    fn process_keypress(self, ed: &mut Editor, key: &Key) -> Result<Self, Error> {
         ed.status_msg = None;
         match self {
+            Self::Insert => panic!("This should not happen - process_keypress called on Insert PromptMode"),
             Self::Save(b) => match process_prompt_keypress(b, key) {
-                PromptState::Active(b) => return Ok(Some(Self::Save(b))),
+                PromptState::Active(b) => return Ok(Self::Save(b)),
                 PromptState::Cancelled => set_status!(ed, "Save aborted"),
                 PromptState::Completed(file_name) => ed.save_as(file_name)?,
             },
@@ -749,7 +760,7 @@ impl PromptMode {
                             _ => (None, true),
                         };
                         let curr_match = ed.find(&query, &last_match, forward);
-                        return Ok(Some(Self::Find(query, saved_cursor, curr_match)));
+                        return Ok(Self::Find(query, saved_cursor, curr_match));
                     }
                     // The prompt was cancelled. Restore the previous position.
                     PromptState::Cancelled => ed.cursor = saved_cursor,
@@ -758,7 +769,7 @@ impl PromptMode {
                 }
             }
             Self::GoTo(b) => match process_prompt_keypress(b, key) {
-                PromptState::Active(b) => return Ok(Some(Self::GoTo(b))),
+                PromptState::Active(b) => return Ok(Self::GoTo(b)),
                 PromptState::Cancelled => (),
                 PromptState::Completed(b) => {
                     let mut split = b
@@ -779,8 +790,16 @@ impl PromptMode {
                     }
                 }
             },
-        }
-        Ok(None)
+            Self::Command(b) => match process_prompt_keypress(b, key) {
+                PromptState::Active(b) => return Ok(Self::Command(b)),
+                PromptState::Cancelled => (),
+                PromptState::Completed(_b) => {
+                    set_status!(ed, "Command mode is not implemented.");
+                },
+            }
+        };
+
+        Ok(Self::Insert)
     }
 }
 
