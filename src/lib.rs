@@ -1,6 +1,7 @@
-//! # Kibi
+//! # Kime
 //!
-//! Kibi is a text editor in ≤1024 lines of code.
+//! *kime*, 決め, noun form of "to decide".
+//! In martial arts, an instantaneous tensing at the correct moment during an attack.
 
 pub use crate::{config::Config, editor::Editor, error::Error};
 

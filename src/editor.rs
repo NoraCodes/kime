@@ -305,7 +305,7 @@ impl<'a> Editor<'a> {
     }
 
     /// Given a file path, try to find a syntax highlighting configuration that matches the path
-    /// extension in one of the config directories (`/etc/kibi/syntax.d`, etc.). If such a
+    /// extension in one of the config directories (`/etc/kime/syntax.d`, etc.). If such a
     /// configuration is found, set the `syntax` attribute of the editor.
     fn select_syntax_highlight(&mut self, path: &Path) -> Result<(), Error> {
         let conf_dirs = &self.config.conf_dirs;
@@ -533,7 +533,7 @@ impl<'a> Editor<'a> {
                 // Draw an empty row
                 self.draw_left_padding(buffer, '~');
                 if self.is_empty() && i == self.screen_rows / 3 {
-                    let welcome_message = format!("Kibi - version {}", env!("CARGO_PKG_VERSION"));
+                    let welcome_message = format!("Kime - version {}", env!("CARGO_PKG_VERSION"));
                     buffer.push_str(&format!("{:^1$.1$}", welcome_message, self.screen_cols));
                 }
             }

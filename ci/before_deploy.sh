@@ -13,12 +13,12 @@ fi
 cargo build --bins --target "$TARGET" --release --verbose
 
 tempdir=$(mktemp -d 2>/dev/null || mktemp -d -t tmp)
-package_name="kibi-$version-$TARGET"
+package_name="kime-$version-$TARGET"
 
 mkdir "$tempdir/$package_name"
 
-cp "target/$TARGET/release/kibi" "$tempdir/$package_name/"
-strip "$tempdir/$package_name/kibi"
+cp "target/$TARGET/release/kime" "$tempdir/$package_name/"
+strip "$tempdir/$package_name/kime"
 
 cp -r README.md COPYRIGHT LICENSE-APACHE LICENSE-MIT config_example "$tempdir/$package_name/"
 

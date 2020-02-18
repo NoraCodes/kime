@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use crate::Error;
 
-/// The global Kibi configuration.
+/// The global Kime configuration.
 pub struct Config {
     /// The size of a tab. Must be > 0.
     pub(crate) tab_stop: usize,
@@ -23,16 +23,18 @@ pub struct Config {
     pub(crate) message_duration: Duration,
     /// Whether to display line numbers.
     pub(crate) show_line_num: bool,
-    /// The paths to directories that may be used to store Kibi configuration files.
+    /// The paths to directories that may be used to store Kime configuration files.
     pub(crate) conf_dirs: Vec<PathBuf>,
 }
 
 impl Config {
     /// Load the configuration, potentially overridden using `config.ini` files that can be located
-    /// in the following directories:
-    ///   - `/etc/kibi` (system-wide configuration).
-    ///   - `$XDG_CONFIG_HOME/kibi` if environment variable `$XDG_CONFIG_HOME` is defined,
-    ///     `$HOME/.config/kibi` otherwise (user-level configuration).
+    /// in the following directories, in reverse order of precedence:
+    ///   - `/etc/kibi` (system-wide fallback configuration).
+    ///   - `/etc/kime` (system-wide configuration).
+    ///   - `$XDG_CONFIG_HOME/kibe` or `$XDG_CONFIG_HOME/kime`
+    ///     if environment variable `$XDG_CONFIG_HOME` is defined,
+    ///     or `$HOME/.config/kibi`, then `$HOME/.config/kime`, for user configuration.
     ///
     /// # Errors
     ///
@@ -43,13 +45,15 @@ impl Config {
             quit_times: 2,
             message_duration: Duration::from_secs(3),
             show_line_num: true,
-            conf_dirs: vec![PathBuf::from("/etc/kibi")],
+            conf_dirs: vec![PathBuf::from("/etc/kibi"), PathBuf::from("/etc/kime")],
         };
 
         if let Ok(xdg_config_home) = env::var("XDG_CONFIG_HOME") {
             conf.conf_dirs.push(Path::new(&xdg_config_home).join("kibi"));
+            conf.conf_dirs.push(Path::new(&xdg_config_home).join("kime"));
         } else if let Ok(home) = env::var("HOME") {
             conf.conf_dirs.push(Path::new(&home).join(".config/kibi"));
+            conf.conf_dirs.push(Path::new(&home).join(".config/kime"));
         }
 
         let conf_paths: Vec<PathBuf> =

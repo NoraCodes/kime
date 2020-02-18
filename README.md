@@ -1,31 +1,24 @@
-# Kibi: A text editor in ≤1024 lines of code, written in Rust
+# Kime
 
-[![Build Status](https://img.shields.io/travis/com/ilai-deutel/kibi/master?logo=travis)](https://travis-ci.com/ilai-deutel/kibi)
-[![Crate](https://img.shields.io/crates/v/kibi.svg)](https://crates.io/crates/kibi)
-[![AUR](https://img.shields.io/aur/version/kibi.svg?logo=arch-linux)](https://aur.archlinux.org/packages/kibi/)
+[![Build Status](https://img.shields.io/travis/com/NoraCodes/kime/master?logo=travis)](https://travis-ci.com/NoraCodes/kime)
+[![Crate](https://img.shields.io/crates/v/kime.svg)](https://crates.io/crates/kime)
 [![Minimum rustc version](https://img.shields.io/badge/rustc-1.41+-blue.svg?logo=rust)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/crates/l/kibi?color=blue)](#license)
+[![License](https://img.shields.io/crates/l/kime?color=blue)](#license)
 
-[![asciicast](https://gist.githubusercontent.com/ilai-deutel/39670157dd008d9932b2f2fd3c885cca/raw/bfdbfc96181c4f6e3ce2663c25c6e97bf57c8684/kibi.gif)](https://asciinema.org/a/KY7tKPlxHXqRdJiv5KaTJbPj5)
+[![asciicast WIP]()]()
 
-A configurable text editor with UTF-8 support, incremental search, syntax highlighting, line numbers and more, written
-in less than 1024 lines<sup>[1](#counted-with)</sup> of Rust with minimal dependencies.
-
-This project is inspired by [`kilo`](https://github.com/antirez/kilo), a text editor written in C.
-See [comparison](#comparison-with-kilo) below for a list of additional features.
-
-Contributions are welcome! Be careful to stay below the 1024-line limit...
-
-<sub><a name="counted-with">1.</a>: Counted with [`tokei`](https://github.com/XAMPPRocky/tokei)</sub>
+A tiny, configurable [**ki**bi](https://github.com/ilai-deutel/kibi)-based **m**odal text
+**e**ditor with UTF-8 support, incremental search, syntax highlighting, line numbers and
+more.
 
 ## Installation
 
 ### With `cargo`
 
-You can install Kibi with [`cargo`](https://github.com/rust-lang/cargo/):
+You can install Kime with [`cargo`](https://github.com/rust-lang/cargo/):
 
 ```bash
-$ cargo install kibi
+$ cargo install kime
 ```
 
 Syntax highlighting configuration files are available in the [`config_example/syntax.d`](config_example/syntax.d)
@@ -36,41 +29,21 @@ For instance:
 
 ```bash
 $ cd ~/repos
-$ git clone https://github.com/ilai-deutel/kibi.git
-$ mkdir -p ~/.config/kibi
-$ ln -sr ./kibi/syntax ~/.config/kibi/syntax.d
-```
-
-### Arch User Repository (Arch Linux)
-
-[`kibi`](https://aur.archlinux.org/packages/kibi/) is available on the AUR.
-
-#### Installation with an AUR helper
-
-For instance, using `yay`: 
-
-```bash
-yay -Syu kibi
-```
-
-#### Manual installation with `makepkg`
-
-```bash
-git clone https://aur.archlinux.org/kibi.git
-cd kibi
-makepkg -si
+$ git clone https://github.com/NoraCodes/kime.git
+$ mkdir -p ~/.config/kime
+$ ln -sr ./kime/syntax ~/.config/kime/syntax.d
 ```
 
 ## Usage
 
 ```bash
 # Start an new text buffer
-$ kibi
+$ kime
 # Open a file
-$ kibi <file path>
+$ kime <file path>
 ```
 
-### Keyboard shortcuts
+## Keyboard Shortcuts
 
 | Keyboard shortcut | Description                                                   |
 | ----------------- | ------------------------------------------------------------- |
@@ -84,11 +57,11 @@ $ kibi <file path>
 
 #### Global configuration
 
-Kibi can be configured using:
-* A system-wide configuration file, located at `/etc/kibi/config.ini`
+Kime can be configured using:
+* A system-wide configuration file, located at `/etc/kime/config.ini`
 * A user-level configuration file, located at:
-  * `$XDG_CONFIG_HOME/kibi/config.ini` if environment variable `$XDG_CONFIG_HOME` is defined
-  * `~/.config/kibi/config.ini` otherwise
+  * `$XDG_CONFIG_HOME/kime/config.ini` if environment variable `$XDG_CONFIG_HOME` is defined
+  * `~/.config/kime/config.ini` otherwise
 
 Example configuration file:
 ```ini
@@ -106,16 +79,19 @@ show_line_numbers=true
 #### Syntax Highlighting
 
 Syntax highlighting can be configured using INI files located at:
-* `/etc/kibi/syntax.d/<file_name>.ini` for system-wide availability
+* `/etc/kime/syntax.d/<file_name>.ini` for system-wide availability
 * For user-level configuration files:
-  * `$XDG_CONFIG_HOME/kibi/syntax.d/<file_name>.ini` if environment variable `$XDG_CONFIG_HOME` is defined
-  * `~/.config/kibi/syntax.d/<file_name>.ini` otherwise
+  * `$XDG_CONFIG_HOME/kime/syntax.d/<file_name>.ini` if environment variable `$XDG_CONFIG_HOME` is defined
+  * `~/.config/kime/syntax.d/<file_name>.ini` otherwise
+
+Kime is compatible with kibi syntax highlighting files and will fall back to the kibi
+locations if highlighting files are not found in the kime locations.
 
 Syntax highlighting configuration follows this format:
 
 ```ini
-### /etc/kibi/syntax.d/rust.ini ###
-# Kibi syntax highlighting configuration for Rust
+### /etc/kime/syntax.d/rust.ini ###
+# Kime syntax highlighting configuration for Rust
 
 name=Rust
 extensions=rs
@@ -130,12 +106,18 @@ keywords_1=abstract, as, async, await, become, box, break, const, continue, crat
 keywords_2=i8, i16, i32, i64, i128, isize, u8, u16, u32, u36, u128, usize, f32, f64, bool, char, str
 ```
 
+## Comparison with `kibi`
+
+This project is built on top of `kibi`, adding the following features:
+
+- nothing, yet.
+
 ## Comparison with `kilo`
 
-This project is inspired by [`kilo`](https://github.com/antirez/kilo), a text editor written by Salvatore Sanfilippo
+`kibi` was inspired by [`kilo`](https://github.com/antirez/kilo), a text editor written by Salvatore Sanfilippo
 (antirez) in C, and [this tutorial](https://viewsourcecode.org/snaptoken/kilo/) (also in C).
 
-`kibi` provides additional features:
+`kime` provides additional features:
 - Support for UTF-8 characters
 - Command to jump to a given row/column
 - Handle window resize
@@ -162,7 +144,7 @@ In addition, `unicode-width` is used to determine the displayed width of Unicode
 way around it: the [unicode character width table](https://github.com/unicode-rs/unicode-width/blob/3033826f8bf05e82724140a981d5941e48fce393/src/tables.rs#L52)
 is 230 lines long.
 
-## Why Kibi?
+## Why Kime?
 
 1. Porting the `kilo` source code from C to Rust and trying to make it idiomatic was interesting
 2. Implementing new features while under the 1024-line constraint is a good challenge
@@ -170,6 +152,6 @@ is 230 lines long.
 
 ## License
 
-Kibi is distributed under the terms of both the MIT license and the Apache License (Version 2.0).
+Kime is distributed under the terms of both the MIT license and the Apache License (Version 2.0).
 
 See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT), and [COPYRIGHT](COPYRIGHT) for details.

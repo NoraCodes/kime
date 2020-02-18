@@ -1,6 +1,6 @@
-//! # Kibi
+//! # Kime
 
-use kibi::{ansi_escape::*, Config, Editor, Error};
+use kime::{ansi_escape::*, Config, Editor, Error};
 
 /// Load the configuration, initialize the editor and run the program, optionally opening a file if
 /// an argument is given.

@@ -27,10 +27,10 @@ impl Display for Error {
 }
 
 impl From<std::io::Error> for Error {
-    /// Convert an IO Error into a Kibi Error.
+    /// Convert an IO Error into a Kime Error.
     fn from(err: std::io::Error) -> Self { Self::IO(err) }
 }
 impl From<nix::Error> for Error {
-    /// Convert a nix IO Error into a Kibi Error.
+    /// Convert a nix IO Error into a Kime Error.
     fn from(err: nix::Error) -> Self { Self::Nix(err) }
 }
